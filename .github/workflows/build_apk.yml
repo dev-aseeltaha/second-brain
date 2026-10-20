@@ -14,13 +14,16 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # فك ضغط ملف الـ ZIP تلقائياً داخل خادم جيت هب
+      # فك ضغط أي ملف ZIP مرفوع في أي مكان داخل المستودع تلقائياً
       - name: Auto-Extract ZIP (Mobile Upload Support)
         run: |
-          ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
+          echo "Searching for any uploaded ZIP files..."
+          ZIP_FILE=$(find . -name "*.zip" | head -n 1)
           if [ -n "$ZIP_FILE" ]; then
-            echo "Found ZIP file: $ZIP_FILE. Extracting..."
-            unzip -o -q "$ZIP_FILE" -d extracted_app/ || true
+            echo "Found ZIP file at: $ZIP_FILE. Extracting..."
+            unzip -o -q "$ZIP_FILE" -d . || true
+          else
+            echo "No zip file found, using repo files directly."
           fi
 
       # تحديد مسار المشروع تلقائياً
@@ -30,6 +33,7 @@ jobs:
           GRADLE_FILE=$(find . -name "settings.gradle.kts" -o -name "settings.gradle" | head -n 1)
           if [ -n "$GRADLE_FILE" ]; then
             PROJECT_DIR=$(dirname "$GRADLE_FILE")
+            echo "Found project directory: $PROJECT_DIR"
             echo "project_dir=$PROJECT_DIR" >> $GITHUB_OUTPUT
           else
             echo "project_dir=." >> $GITHUB_OUTPUT
@@ -41,8 +45,10 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      # قبول تراخيص الأندرويد الموجودة مسبقاً في خوادم جيت هب
+      - name: Accept Android SDK Licenses
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
